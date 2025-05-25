@@ -33,9 +33,9 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-const clips = ["clip1.mp4", "clip2.mp4"]; // à adapter à ton contenu
+const clips = ["clip1.mp4", "clip2.mp4"]; // a adapter en fonction des clips
 
-let rooms = {}; // roomId: { players, recordings, hostId, validated, clipIndex }
+let rooms = {};
 
 function playNextClip(roomId) {
   const room = rooms[roomId];
@@ -44,13 +44,13 @@ function playNextClip(roomId) {
   if (!room.clipIndex) {
     room.clipIndex = 0;
 
-    // 🔁 Initialiser les scores à 0 dès le début
+    // initialise les scores a 0 des le début
     room.scores = {};
     for (const playerId of room.players.keys()) {
       room.scores[playerId] = 0;
     }
 
-    // 🔼 Envoyer les scores initiaux
+    // envoye les scores initiaux
     const scoresByName = {};
     for (const [socketId, score] of Object.entries(room.scores)) {
       const name = room.players.get(socketId);
@@ -66,13 +66,13 @@ function playNextClip(roomId) {
 
   const clipName = clips[room.clipIndex];
 
-  // Déterminer la phase spéciale avant lancement officiel
+  // determine la phase avant lancement officiel
   const phase = room.clipIndex === 0 ? "waiting_start" : "playing_clip";
   io.to(roomId).emit("phase_change", phase);
   io.to(roomId).emit("play_clip", { clipName });
   io.to(roomId).emit("phase_change", "playing_clip");
 
-  // Reset state
+  // reset les state
   room.recordings = {};
   room.validated = new Set();
 
@@ -171,7 +171,7 @@ io.on("connection", (socket) => {
     const room = rooms[roomId];
     if (!room) return;
     if (!room.votes[targetId]) room.votes[targetId] = [];
-    // Refus si ce joueur a déjà voté pour cette cible
+    // refus si ce joueur a deja vote pour cette personne
     if (room.votes[targetId].some((v) => v.voter === socket.id)) return;
     room.votes[targetId].push({ voter: socket.id, note });
     const expectedVotes = room.players.size - 1;
@@ -180,7 +180,7 @@ io.on("connection", (socket) => {
       const total = room.votes[targetId].reduce((sum, v) => sum + v.note, 0);
       room.scores[targetId] = (room.scores[targetId] || 0) + total;
 
-      // Émettre les scores
+      // emets les scores
       const scoresByName = {};
       for (const [socketId, score] of Object.entries(room.scores)) {
         const name = room.players.get(socketId);
@@ -188,7 +188,7 @@ io.on("connection", (socket) => {
       }
       io.to(roomId).emit("update_scores", scoresByName);
 
-      // Passer au prochain vote
+      // passe au prochain vote
       room.currentVoteIndex++;
       if (room.currentVoteIndex < room.voteQueue.length) {
         const nextId = room.voteQueue[room.currentVoteIndex];
@@ -210,7 +210,7 @@ io.on("connection", (socket) => {
     const room = rooms[roomId];
     if (!room || socket.id !== room.hostId) return;
 
-    // Supprimer les anciens fichiers d'enregistrements
+    // supprime les anciens fichiers d'enregistrement
     for (const blobName of Object.values(room.recordings)) {
       const filePath = path.join(__dirname, "uploads", blobName);
       fs.unlink(filePath, (err) => {
@@ -219,7 +219,7 @@ io.on("connection", (socket) => {
       });
     }
 
-    // Réinitialiser l'état de la room
+    // reinitialise l'état de la room
     room.recordings = {};
     room.validated = new Set();
     room.voteQueue = [];
@@ -227,7 +227,7 @@ io.on("connection", (socket) => {
     room.votes = {};
 
     if (room.clipIndex >= room.clips.length) {
-      // ✅ Fin de partie : vider dossier uploads
+      // vide le dossier uploads en fin de game
       const uploadsDir = path.join(__dirname, "uploads");
       fs.readdir(uploadsDir, (err, files) => {
         if (err) return console.error("Erreur lecture uploads:", err);
@@ -238,15 +238,14 @@ io.on("connection", (socket) => {
         }
       });
 
-      // ✅ Envoyer game over
+      // envoie le game over
       io.to(roomId).emit("game_over");
-      return; // ← ⚠️ NÉCESSAIRE : ne pas appeler playNextClip après
+      return; // necessaire pour ne pas renvoyer playNextClip
     }
 
-    // Lancer le prochain clip
+    // lance le prochain clip
     playNextClip(roomId);
   });
-
 
   socket.on("disconnect", () => {
     for (const roomId in rooms) {

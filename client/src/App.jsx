@@ -32,8 +32,11 @@ export default function App() {
   const [hasValidated, setHasValidated] = useState(false);
   const [buttonCountdown, setButtonCountdown] = useState(null);
   const [buttonAction, setButtonAction] = useState(null);
+  const [videoDuration, setVideoDuration] = useState(null);
+  const [recordingProgress, setRecordingProgress] = useState(0);
 
   const videoRef = useRef(null);
+  const audioRef = useRef(null);
   const chunksRef = useRef([]);
   const roomId = "room1";
   const isHost = socketId === hostId;
@@ -124,7 +127,6 @@ export default function App() {
     };
   }, []);
 
-  
   useEffect(() => {
     if (countdown === null || countdown <= 0) return;
 
@@ -178,7 +180,56 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [buttonCountdown, buttonAction, isHost]);
 
+  useEffect(() => {
+    if (phase === "voting" && videoRef.current) {
+      const video = videoRef.current;
 
+      // Remet la vidéo au début
+      video.currentTime = 0;
+      video.muted = true;
+
+      const playVideo = () => {
+        // Essaye de lancer la vidéo
+        const playPromise = video.play();
+
+        // Certaines versions de navigateur nécessitent une gestion des promesses
+        if (playPromise !== undefined) {
+          playPromise.catch((error) => {
+            console.warn("Erreur de lecture vidéo :", error);
+          });
+        }
+      };
+
+      // Attends un tout petit délai pour être sûr que le DOM est à jour
+      setTimeout(() => {
+        playVideo();
+      }, 100);
+    }
+  }, [currentAudio, phase]);
+
+  useEffect(() => {
+    if (videoDuration && isRecording) {
+      const timer = setTimeout(() => {
+        stopRecording();
+      }, videoDuration * 1000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [videoDuration, isRecording]);
+
+  useEffect(() => {
+    if (!isRecording || !videoDuration) return;
+
+    const startTime = Date.now();
+
+    const interval = setInterval(() => {
+      const elapsed = (Date.now() - startTime) / 1000;
+      const progress = Math.min((elapsed / videoDuration) * 100, 100);
+      setRecordingProgress(progress);
+    }, 100); // mise à jour toutes les 100ms
+
+    return () => clearInterval(interval);
+  }, [isRecording, videoDuration]);
 
   const joinGame = () => {
     if (name.trim()) {
@@ -225,6 +276,22 @@ export default function App() {
         setAudioURL(url);
         setHasRecorded(true);
         setIsRecording(false);
+        setTimeout(() => {
+          if (videoRef.current && audioRef.current) {
+            videoRef.current.currentTime = 0;
+            audioRef.current.currentTime = 0;
+            videoRef.current.muted = true;
+
+            videoRef.current.play().catch((err) => {
+              console.error("Erreur lecture vidéo:", err);
+            });
+
+            audioRef.current.play().catch((err) => {
+              console.error("Erreur lecture audio:", err);
+            });
+          }
+        }, 300);
+
         resolve();
       };
 
@@ -243,6 +310,10 @@ export default function App() {
   };
 
   const discardRecording = () => {
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.currentTime = 0;
+    }
     setAudioBlob(null);
     setAudioURL(null);
     setHasRecorded(false);
@@ -278,12 +349,22 @@ export default function App() {
         </div>
       )}
 
-      {phase === "waiting_start" &&!isHost && <p className="waiting">🕒 En attente du host pour lancer la partie...</p>}
+      {phase === "waiting_start" && !isHost && (
+        <p className="waiting">
+          🕒 En attente du host pour lancer la partie...
+        </p>
+      )}
 
       {phase === "waiting_start" && isHost && (
-        <button className="waiting_start" onClick={() => {
-          socket.emit("request_button_countdown", { roomId, action: "start_game" });
-        }}>
+        <button
+          className="waiting_start"
+          onClick={() => {
+            socket.emit("request_button_countdown", {
+              roomId,
+              action: "start_game",
+            });
+          }}
+        >
           Commencer la partie
         </button>
       )}
@@ -300,7 +381,6 @@ export default function App() {
               socket.emit("clip_done", roomId);
               setVideoEnded(true);
             }}
-            
           />
           {videoEnded && (
             <button className="record_button" onClick={startRecording}>
@@ -313,11 +393,7 @@ export default function App() {
       {phase === "recording" && showVideo && (
         <div className="recording">
           {!isLocallyRecording && (
-            <video
-              ref={videoRef}
-              src={`/${currentClip}`}
-              controls
-            />
+            <video ref={videoRef} src={`/${currentClip}`} controls />
           )}
 
           {isLocallyRecording && (
@@ -327,7 +403,11 @@ export default function App() {
               autoPlay
               controls
               muted
-              
+              onLoadedMetadata={() => {
+                if (videoRef.current) {
+                  setVideoDuration(videoRef.current.duration);
+                }
+              }}
             />
           )}
 
@@ -339,9 +419,20 @@ export default function App() {
 
           {isRecording && (
             <div className="recording_container">
-              <p>⏺️ Enregistrement en cours...</p>
+              <div className="progress_bar_container">
+                <div className="progress_bar_bg">
+                  <div
+                    className="progress_bar"
+                    style={{ width: `${recordingProgress}%` }}
+                  />
+                </div>
+              </div>
+
               <div className="buttons_container">
-                <button className="cancel_button" onClick={cancelRecording}><img src="./bin.svg" alt="bin icon" /></button>
+                <p>⏺️ Enregistrement en cours...</p>
+                <button className="cancel_button" onClick={cancelRecording}>
+                  <img src="./bin.svg" alt="bin icon" />
+                </button>
                 <button className="end_record_btn" onClick={stopRecording}>
                   <img src="./check.svg" alt="check icon" />
                 </button>
@@ -351,7 +442,7 @@ export default function App() {
 
           {hasRecorded && audioURL && (
             <div className="recorded_audio">
-              <audio controls src={audioURL}></audio>
+              <audio ref={audioRef} controls src={audioURL}></audio>
               <div className="buttons_container">
                 <button
                   className="discard_btn"
@@ -372,15 +463,23 @@ export default function App() {
           )}
 
           {hasRecorded && (
-            <p>✅ Joueurs ayant validé : {validatedCount} / {playerCount}</p>
+            <p>
+              ✅ Joueurs ayant validé : {validatedCount} / {playerCount}
+            </p>
           )}
         </div>
       )}
 
       {phase === "playing_recordings" && isHost && (
-        <button className="listen_btn" onClick={() => {
-          socket.emit("request_button_countdown", { roomId, action: "listen_imitations" });
-        }}>
+        <button
+          className="listen_btn"
+          onClick={() => {
+            socket.emit("request_button_countdown", {
+              roomId,
+              action: "listen_imitations",
+            });
+          }}
+        >
           🔊 Écouter les imitations
         </button>
       )}
@@ -392,14 +491,15 @@ export default function App() {
       {phase === "voting" && (
         <div className="voting">
           <p>
-            🎧 Écoute de l’imitation de <strong>{players[currentVoterId] || "Inconnu"}</strong>
+            🎧 Écoute de l’imitation de{" "}
+            <strong>{players[currentVoterId] || "Inconnu"}</strong>
           </p>
           <video
+            ref={videoRef}
             src={`/${currentClip}`}
             autoPlay
             muted
             controls
-            
           />
           <audio
             src={`${backendURL}/uploads/${currentAudio}`}
@@ -410,7 +510,12 @@ export default function App() {
             <div className="rating_container">
               <p>Attribuez une note :</p>
               {[-1, 1, 2].map((note) => (
-                <button data-id={note} key={note} onClick={() => handleVote(note)} disabled={hasVoted}>
+                <button
+                  data-id={note}
+                  key={note}
+                  onClick={() => handleVote(note)}
+                  disabled={hasVoted}
+                >
                   {note}
                 </button>
               ))}
@@ -425,9 +530,14 @@ export default function App() {
         <div className="voting_done">
           <h2>🎉 Fin du tour !</h2>
           {isHost && (
-            <button onClick={() => {
-              socket.emit("request_button_countdown", { roomId, action: "next_clip" });
-            }}>
+            <button
+              onClick={() => {
+                socket.emit("request_button_countdown", {
+                  roomId,
+                  action: "next_clip",
+                });
+              }}
+            >
               🔁 Lancer le prochain clip
             </button>
           )}
@@ -437,16 +547,17 @@ export default function App() {
         </div>
       )}
 
-    
       {countdown !== null && (
         <div className="countdown-message">
-          Tout le monde à voté ! Prochain audio dans {countdown} seconde{countdown > 1 ? "s" : ""}
+          Tout le monde à voté ! Prochain audio dans {countdown} seconde
+          {countdown > 1 ? "s" : ""}
         </div>
       )}
 
       {buttonCountdown !== null && (
         <div className="global-countdown">
-          ⏳ Démarrage dans {buttonCountdown} seconde{buttonCountdown > 1 ? "s" : ""}
+          ⏳ Démarrage dans {buttonCountdown} seconde
+          {buttonCountdown > 1 ? "s" : ""}
         </div>
       )}
 
@@ -455,13 +566,18 @@ export default function App() {
           <h2>👥 Joueurs connectés : </h2>
           <ol>
             {Object.entries(players).map(([id, name]) => (
-              <li key={id}>{name}{id === hostId && " (Hôte)"}</li>
+              <li key={id}>
+                {name}
+                {id === hostId && " (Hôte)"}
+              </li>
             ))}
           </ol>
         </div>
       )}
 
-      {!["waiting", "enter_name", "waiting_start", "final_scoreboard"].includes(phase) && (
+      {!["waiting", "enter_name", "waiting_start", "final_scoreboard"].includes(
+        phase
+      ) && (
         <div className="scoreboard">
           <h2>🏆 Scores </h2>
           {Object.entries(scores).map(([name, score]) => (
@@ -476,12 +592,16 @@ export default function App() {
       {phase === "final_scoreboard" && (
         <div className="final_scoreboard">
           <h2>🏆 Résultats finaux 🏆</h2>
-          {Object.entries(scores).map(([name, score]) => (
-            <div className="player">
-              <div>{name}</div>
-              <div>{score}</div>
-            </div>
-          ))}
+          {Object.entries(scores)
+            .sort((a, b) => b[1] - a[1])
+            .map(([name, score], index) => (
+              <div className="player" key={name}>
+                <div>
+                  {index + 1}. {name}
+                </div>
+                <div>{score} pts</div>
+              </div>
+            ))}
         </div>
       )}
     </div>
