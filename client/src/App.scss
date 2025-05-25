@@ -1,71 +1,75 @@
-body{
+body {
   margin: 0;
-  padding: 0;  
+  padding: 0;
   color: white;
-  font-family: 'Delius';
+  font-family: "Delius";
 }
 
-.game_container{
+.game_container {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: space-evenly;
-  background: #2A7B9B;
-  background: linear-gradient(129deg,rgba(42, 123, 155, 1) 0%, rgba(12, 33, 67, 1) 0%, rgba(50, 12, 36, 1) 100%);
+  background: #2a7b9b;
+  background: linear-gradient(
+    129deg,
+    rgba(42, 123, 155, 1) 0%,
+    rgba(12, 33, 67, 1) 0%,
+    rgba(50, 12, 36, 1) 100%
+  );
   width: 100%;
   height: 100vh;
 
-  h1{
+  h1 {
     position: absolute;
     top: 0;
     left: 0;
     margin: 15px;
     font-size: 50px;
   }
-  .waiting{
+  .waiting {
     font-size: 30px;
     font-weight: 600;
     margin-top: 100px;
   }
 
-  .waiting_start{
+  .waiting_start {
     height: 100px;
     width: 350px;
     padding: 0;
     font-size: 30px;
-    font-family: 'Delius';
+    font-family: "Delius";
     border-radius: 10px;
     margin-top: 50px;
     transition: transform 0.8s ease;
 
-      &:hover{
-        background-color: #4a5e5f;
-        color: #f8f5ee;
-        transform: scale(1.2);
-      }
-
+    &:hover {
+      background-color: #4a5e5f;
+      color: #f8f5ee;
+      transform: scale(1.2);
+    }
   }
-  .enter_name{
+  .enter_name {
     display: flex;
     justify-content: space-between;
     height: 60px;
     width: 600px;
 
-    input{
+    input {
       border: 0;
       border-radius: 10px;
       height: 100%;
-      width: calc( 65% - 40px );
+      width: calc(65% - 40px);
       padding: 0 0 0 40px;
       font-size: 24px;
-      font-family: 'Delius';
+      font-family: "Delius";
       font-weight: 600;
     }
 
-    button{
+    button {
       border: 0;
       font-size: 24px;
-      font-family: 'Delius';
+      font-family: "Delius";
       font-weight: 600;
       border-radius: 10px;
       padding: 0;
@@ -73,7 +77,7 @@ body{
       width: 30%;
       transition: transform 0.8s ease;
 
-      &:hover{
+      &:hover {
         background-color: #4a5e5f;
         color: #f8f5ee;
         transform: scale(1.2);
@@ -81,22 +85,22 @@ body{
     }
   }
 
-  .players_connected{
-    h2{
+  .players_connected {
+    h2 {
       font-size: 54px;
     }
-    
-    ol{
+
+    ol {
       list-style-type: none;
 
-      li{
+      li {
         font-size: 30px;
         margin-top: 10px;
       }
     }
   }
-  .playing_clip{
-    video{
+  .playing_clip {
+    video {
       border: 3px solid white;
       border-radius: 30px;
       max-height: 500px;
@@ -105,7 +109,7 @@ body{
       margin-bottom: 50px;
     }
   }
-  .recording{
+  .recording {
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -113,7 +117,7 @@ body{
     text-align: center;
     height: 900px;
 
-    video{
+    video {
       border: 3px solid white;
       border-radius: 30px;
       max-height: 500px;
@@ -121,7 +125,7 @@ body{
       width: auto;
       margin-bottom: 50px;
     }
-    .record_button{
+    .record_button {
       height: 120px;
       width: 120px;
       border-radius: 75px;
@@ -130,27 +134,50 @@ body{
       background-color: rgb(8, 224, 37);
       transition: transform 0.8s ease;
 
-      &:hover{
+      &:hover {
         transform: scale(1.2);
       }
 
-      img{
+      img {
         width: 50px;
       }
     }
-    
-    .recording_container{
+
+    .recording_container {
       display: flex;
+      flex-direction: column;
       justify-content: space-between;
       width: 90%;
 
+      .progress_bar_container {
+        width: 100%;
+        margin-bottom: 50px;
+        height: 10px;
+        background-color: #eee;
+        border-radius: 5px;
+        overflow: hidden;
 
-      .buttons_container{
+        .progress_bar_bg {
+          width: 100%;
+          height: 100%;
+          background-color: #ccc;
+          border-radius: 5px;
+          position: relative;
+
+          .progress_bar {
+            height: 100%;
+            background-color: #007bff;
+            transition: width 0.1s linear;
+          }
+        }
+      }
+
+      .buttons_container {
         display: flex;
-        width: 30%;
+        width: 100%;
         justify-content: space-between;
-        
-        .cancel_button{
+
+        .cancel_button {
           height: 50px;
           width: 50px;
           border-radius: 25px;
@@ -159,17 +186,17 @@ body{
           background-color: rgb(224, 101, 70);
           transition: transform 0.8s ease;
 
-          &:hover{
+          &:hover {
             transform: scale(1.2);
           }
 
-          img{
+          img {
             margin-top: 3px;
             width: 40px;
           }
         }
 
-        .end_record_btn{
+        .end_record_btn {
           height: 50px;
           width: 50px;
           border-radius: 25px;
@@ -178,11 +205,11 @@ body{
           background-color: rgb(8, 224, 37);
           transition: transform 0.8s ease;
 
-          &:hover{
+          &:hover {
             transform: scale(1.2);
           }
 
-          img{
+          img {
             margin-top: 3px;
             width: 30px;
           }
@@ -190,7 +217,7 @@ body{
       }
     }
 
-    .recorded_audio{
+    .recorded_audio {
       height: 150px;
       width: 500px;
       display: flex;
@@ -198,37 +225,37 @@ body{
       align-items: center;
       justify-content: space-between;
 
-      .buttons_container{
+      .buttons_container {
         width: 100%;
         height: 50px;
         display: flex;
         justify-content: space-evenly;
         margin-bottom: 10px;
 
-        .validate_btn{
+        .validate_btn {
           width: 40%;
           border-radius: 5px;
           border: 0;
           background-color: rgb(8, 224, 37);
           transition: transform 0.8s ease;
-          font-family: 'Delius';
+          font-family: "Delius";
           font-size: 20px;
 
-          &:hover{
+          &:hover {
             transform: scale(1.2);
           }
         }
 
-        .discard_btn{
+        .discard_btn {
           width: 40%;
           border-radius: 5px;
           border: 0;
           background-color: rgb(224, 101, 70);
           transition: transform 0.8s ease;
-          font-family: 'Delius';
+          font-family: "Delius";
           font-size: 20px;
 
-          &:hover{
+          &:hover {
             transform: scale(1.2);
           }
         }
@@ -236,24 +263,24 @@ body{
     }
   }
 
-  .listen_btn{
+  .listen_btn {
     height: 100px;
     width: 450px;
     padding: 0;
     font-size: 30px;
-    font-family: 'Delius';
+    font-family: "Delius";
     border-radius: 10px;
     margin-top: 50px;
     transition: transform 0.8s ease;
 
-      &:hover{
-        background-color: #4a5e5f;
-        color: #f8f5ee;
-        transform: scale(1.2);
-      }
+    &:hover {
+      background-color: #4a5e5f;
+      color: #f8f5ee;
+      transform: scale(1.2);
+    }
   }
 
-  .voting{
+  .voting {
     display: flex;
     flex-direction: column;
     justify-content: space-evenly;
@@ -261,12 +288,11 @@ body{
     height: 900px;
     margin-top: -100px;
 
-
-    p{
+    p {
       font-size: 36px;
     }
 
-    video{
+    video {
       border: 3px solid white;
       border-radius: 30px;
       max-height: 400px;
@@ -275,24 +301,24 @@ body{
       margin-bottom: 50px;
     }
 
-    .rating_container{
+    .rating_container {
       width: 100%;
       display: flex;
       justify-content: space-between;
       align-items: center;
 
-      button{
+      button {
         height: 60px;
         width: 60px;
         border-radius: 10px;
-        font-family: 'Delius';
+        font-family: "Delius";
         font-size: 34px;
       }
-      
+
       button[data-id="-1"] {
         transition: transform 0.8s ease;
 
-        &:hover{
+        &:hover {
           background-color: rgb(224, 101, 70);
           color: #f8f5ee;
           transform: scale(1.2);
@@ -302,17 +328,17 @@ body{
       button[data-id="1"] {
         transition: transform 0.8s ease;
 
-        &:hover{
+        &:hover {
           background-color: rgb(53, 47, 65);
           color: #f8f5ee;
           transform: scale(1.2);
         }
       }
-      
+
       button[data-id="2"] {
         transition: transform 0.8s ease;
 
-        &:hover{
+        &:hover {
           background-color: rgb(15, 247, 73);
           transform: scale(1.2);
         }
@@ -320,30 +346,29 @@ body{
     }
   }
 
-
-  .voting_done{
+  .voting_done {
     display: flex;
     flex-direction: column;
     align-items: center;
 
-    button{
+    button {
       height: 100px;
       width: 400px;
       padding: 0;
       font-size: 30px;
-      font-family: 'Delius';
+      font-family: "Delius";
       border-radius: 10px;
       margin-top: 50px;
       transition: transform 0.8s ease;
 
-        &:hover{
-          background-color: #4a5e5f;
-          color: #f8f5ee;
-          transform: scale(1.2);
-        }
+      &:hover {
+        background-color: #4a5e5f;
+        color: #f8f5ee;
+        transform: scale(1.2);
+      }
     }
   }
-  .scoreboard{
+  .scoreboard {
     position: absolute;
     left: 40px;
     top: 50%;
@@ -354,35 +379,34 @@ body{
     padding: 40px 40px 10px 40px;
     border-radius: 25px;
 
-    h2{ 
+    h2 {
       font-size: 44px;
       margin: 0 0 50px 0;
     }
 
-    .player{
+    .player {
       display: flex;
       justify-content: space-between;
       width: 100%;
       height: 60px;
       text-align: left;
       font-size: 24px;
-      
     }
   }
 
-  .final_scoreboard{
+  .final_scoreboard {
     height: auto;
     width: 450px;
     background-color: #4a5e5f;
     padding: 40px 40px 10px 40px;
     border-radius: 25px;
 
-    h2{ 
+    h2 {
       font-size: 44px;
       margin: 0 0 50px 0;
     }
 
-    .player{
+    .player {
       display: flex;
       justify-content: space-between;
       width: 100%;
@@ -392,6 +416,3 @@ body{
     }
   }
 }
-/* violet : #320c24
- bleu : #0c2143 */ 
-
