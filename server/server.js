@@ -30,12 +30,22 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 const clips = [
-  "sailor_moon.mp4",
   "controle_de_police.mp4",
   "omerta_47.mp4",
   "velos_en_lair.mp4",
   "sam_teurpoin.mp4",
-  "alexo_bicicleta.mp4"
+  "alexo_bicicleta.mp4",
+  "affronte_ce_cul.mp4",
+  "chatte_de_ta_mere.mp4",
+  "ibratv_walouzz.mp4",
+  "je_suis_jamais_ne.mp4",
+  "mazeltov_jewbuzz.mp4",
+  "metamask.mp4",
+  "mon_air_consanguin.mp4",
+  "mounir_moons_homme.mp4",
+  "rebeulove.mp4",
+  "walakdouktoulib.mp4"
+
 ]; // nouveau clip modif ici
 
 let rooms = {}; // roomId: { players, recordings, hostId, validated, clipIndex }
