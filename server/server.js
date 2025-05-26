@@ -33,7 +33,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-const clips = ["clip1.mp4", "clip2.mp4"]; // a adapter en fonction des clips
+const clips = ["asterion_morose.mp4", "asterion_vache.mp4", "bassem_aller_ftg.mp4", "mario_chute.mp4", "scooby_doo.mp4", "seranno.mp4", "skype.mp4", "zombie.mp4", "gnegnegne.mp4", "guettez_barre.mp4", "amr_khera.mp4", "jean_cacabox.mp4", "gamixtreize_bz.mp4", "clash_r_emotes.mp4"]; // nouveau clip modif ici
 
 let rooms = {};
 
