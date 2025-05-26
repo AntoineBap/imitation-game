@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
-import './App.scss'
+import "./App.scss";
 
-const backendURL = import.meta.env.VITE_BACKEND_URL
+const backendURL = import.meta.env.VITE_BACKEND_URL;
 
 const socket = io(backendURL);
 
 export default function App() {
-  const [phase, setPhase] = useState("enter_name");
+  const [phase, setPhase] = useState("lobby_selection");
   const [name, setName] = useState("");
   const [players, setPlayers] = useState({});
   const [hostId, setHostId] = useState(null);
@@ -34,11 +34,12 @@ export default function App() {
   const [buttonAction, setButtonAction] = useState(null);
   const [videoDuration, setVideoDuration] = useState(null);
   const [recordingProgress, setRecordingProgress] = useState(0);
+  const [roomId, setRoomId] = useState(null); // room dynamique
+  const [joinCode, setJoinCode] = useState(""); // input utilisateur
 
   const videoRef = useRef(null);
   const audioRef = useRef(null);
   const chunksRef = useRef([]);
-  const roomId = "room1";
   const isHost = socketId === hostId;
 
   const handleVote = (note) => {
@@ -231,13 +232,6 @@ export default function App() {
     return () => clearInterval(interval);
   }, [isRecording, videoDuration]);
 
-  const joinGame = () => {
-    if (name.trim()) {
-      socket.emit("join", { roomId, name });
-      setPhase("waiting");
-    }
-  };
-
   const startClip = () => {
     setShowVideo(true);
     socket.emit("phase_change", "playing_clip");
@@ -338,14 +332,108 @@ export default function App() {
     <div className="game_container">
       <h1 className="game_title">Imitation Game</h1>
 
-      {phase === "enter_name" && (
-        <div className="enter_name">
-          <input
-            placeholder="Ton prénom"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-          <button onClick={joinGame}>Rejoindre</button>
+      {phase === "lobby_selection" && (
+        <div className="lobby_selection">
+          <h2>Bienvenue !</h2>
+          <button
+            className="create_room_btn"
+            onClick={() => setPhase("create_room")}
+          >
+            Créer un salon
+          </button>
+          <button
+            className="join_room_btn"
+            onClick={() => setPhase("join_room")}
+          >
+            Rejoindre un salon
+          </button>
+        </div>
+      )}
+
+      {phase === "create_room" && (
+        <div className="create_room">
+          <div className="top_content">
+            <button
+              className="back_arrow_btn"
+              onClick={() => {
+                setPhase("lobby_selection");
+              }}
+            >
+              <img src="./back_arrow.svg" alt="" />
+            </button>
+            <h2>Créer un salon</h2>
+          </div>
+
+          <div className="name_input_container">
+            <input
+              placeholder="Ton prénom"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+            <button
+              onClick={() => {
+                if (!name.trim()) return;
+                socket.emit("create_room", { name }, ({ success, roomId }) => {
+                  if (success) {
+                    setRoomId(roomId);
+                    setPhase("waiting");
+                  } else {
+                    alert("Erreur création salon");
+                  }
+                });
+              }}
+            >
+              Créer
+            </button>
+          </div>
+        </div>
+      )}
+
+      {phase === "join_room" && (
+        <div className="join_room">
+          <div className="top_content">
+            <button
+              className="back_arrow_btn"
+              onClick={() => {
+                setPhase("lobby_selection");
+              }}
+            >
+              <img src="./back_arrow.svg" alt="" />
+            </button>
+            <h2>Rejoindre un salon</h2>
+          </div>
+          <div className="name_input_container">
+            <input
+              placeholder="Code à 6 chiffres"
+              value={joinCode}
+              maxLength={6}
+              onChange={(e) => setJoinCode(e.target.value.replace(/\D/g, ""))}
+            />
+            <input
+              placeholder="Ton prénom"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+            <button
+              onClick={() => {
+                if (!name.trim() || joinCode.length !== 6) return;
+                socket.emit(
+                  "join_room",
+                  { code: joinCode, name },
+                  ({ success, roomId, error }) => {
+                    if (success) {
+                      setRoomId(roomId);
+                      setPhase("waiting");
+                    } else {
+                      alert("Salon introuvable");
+                    }
+                  }
+                );
+              }}
+            >
+              Rejoindre
+            </button>
+          </div>
         </div>
       )}
 
@@ -564,6 +652,9 @@ export default function App() {
       {(phase === "waiting" || phase === "waiting_start") && (
         <div className="players_connected">
           <h2>👥 Joueurs connectés : </h2>
+          <p>
+            🔐 Code du salon : <strong>{roomId}</strong>
+          </p>
           <ol>
             {Object.entries(players).map(([id, name]) => (
               <li key={id}>
@@ -575,9 +666,14 @@ export default function App() {
         </div>
       )}
 
-      {!["waiting", "enter_name", "waiting_start", "final_scoreboard"].includes(
-        phase
-      ) && (
+      {![
+        "lobby_selection",
+        "create_room",
+        "join_room",
+        "waiting",
+        "waiting_start",
+        "final_scoreboard",
+      ].includes(phase) && (
         <div className="scoreboard">
           <h2>🏆 Scores </h2>
           {Object.entries(scores).map(([name, score]) => (

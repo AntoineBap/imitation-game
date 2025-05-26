@@ -2,7 +2,7 @@ body {
   margin: 0;
   padding: 0;
   color: white;
-  font-family: "Delius";
+  font-family: "Lexend";
 }
 
 .game_container {
@@ -27,6 +27,182 @@ body {
     margin: 15px;
     font-size: 50px;
   }
+
+  .lobby_selection {
+    display: flex;
+    text-align: center;
+    align-items: center;
+    flex-direction: column;
+    justify-content: space-evenly;
+    height: 500px;
+    width: 500px;
+
+    h2 {
+      margin: 0;
+      font-size: 44px;
+    }
+
+    button {
+      height: 100px;
+      width: 350px;
+      padding: 0;
+      border: 0;
+      font-size: 30px;
+      font-family: "Lexend";
+      border-radius: 10px;
+      margin-top: 50px;
+      transition: transform 0.8s ease;
+
+      &:hover {
+        background-color: #4a5e5f;
+        color: #f8f5ee;
+        transform: scale(1.2);
+      }
+    }
+  }
+
+  .create_room {
+    display: flex;
+    justify-content: space-evenly;
+    flex-direction: column;
+    text-align: center;
+    height: 500px;
+    width: 800px;
+
+    .top_content {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      width: 100%;
+      margin-bottom: 80px;
+
+      .back_arrow_btn {
+        height: 50px;
+        width: 50px;
+        background-color: transparent;
+        border: 0;
+
+        img {
+          height: 50px;
+        }
+      }
+
+      h2 {
+        width: 100%;
+        margin: 0;
+        font-size: 44px;
+      }
+    }
+
+    .name_input_container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      height: 280px;
+
+      input {
+        border: 0;
+        border-radius: 10px;
+        height: 70px;
+        width: calc(100% - 40px);
+        padding: 0 0 0 40px;
+        font-size: 24px;
+        font-family: "Lexend";
+        font-weight: 600;
+      }
+
+      button {
+        border: 0;
+        font-size: 24px;
+        font-family: "Lexend";
+        font-weight: 600;
+        border-radius: 10px;
+        padding: 0;
+        height: 90px;
+        width: 30%;
+        transition: transform 0.8s ease;
+
+        &:hover {
+          background-color: #4a5e5f;
+          color: #f8f5ee;
+          transform: scale(1.2);
+        }
+      }
+    }
+  }
+
+  .join_room {
+    display: flex;
+    justify-content: space-evenly;
+    flex-direction: column;
+    text-align: center;
+    height: auto;
+    width: 600px;
+
+    .top_content {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      width: 100%;
+      margin-bottom: 80px;
+
+      .back_arrow_btn {
+        height: 50px;
+        width: 50px;
+        background-color: transparent;
+        border: 0;
+
+        img {
+          height: 50px;
+        }
+      }
+
+      h2 {
+        width: 100%;
+        margin: 0;
+        font-size: 44px;
+      }
+    }
+
+    .name_input_container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      height: 400px;
+
+      input {
+        border: 0;
+        border-radius: 10px;
+        height: 70px;
+        width: calc(100% - 40px);
+        padding: 0 0 0 40px;
+        font-size: 24px;
+        font-family: "Lexend";
+        font-weight: 600;
+      }
+
+      button {
+        border: 0;
+        font-size: 24px;
+        font-family: "Lexend";
+        font-weight: 600;
+        border-radius: 10px;
+        padding: 0;
+        height: 90px;
+        width: 30%;
+        transition: transform 0.8s ease;
+
+        &:hover {
+          background-color: #4a5e5f;
+          color: #f8f5ee;
+          transform: scale(1.2);
+        }
+      }
+    }
+  }
+
   .waiting {
     font-size: 30px;
     font-weight: 600;
@@ -38,7 +214,7 @@ body {
     width: 350px;
     padding: 0;
     font-size: 30px;
-    font-family: "Delius";
+    font-family: "Lexend";
     border-radius: 10px;
     margin-top: 50px;
     transition: transform 0.8s ease;
@@ -49,45 +225,15 @@ body {
       transform: scale(1.2);
     }
   }
-  .enter_name {
-    display: flex;
-    justify-content: space-between;
-    height: 60px;
-    width: 600px;
-
-    input {
-      border: 0;
-      border-radius: 10px;
-      height: 100%;
-      width: calc(65% - 40px);
-      padding: 0 0 0 40px;
-      font-size: 24px;
-      font-family: "Delius";
-      font-weight: 600;
-    }
-
-    button {
-      border: 0;
-      font-size: 24px;
-      font-family: "Delius";
-      font-weight: 600;
-      border-radius: 10px;
-      padding: 0;
-      height: 100%;
-      width: 30%;
-      transition: transform 0.8s ease;
-
-      &:hover {
-        background-color: #4a5e5f;
-        color: #f8f5ee;
-        transform: scale(1.2);
-      }
-    }
-  }
 
   .players_connected {
     h2 {
       font-size: 54px;
+    }
+
+    p {
+      font-size: 40px;
+      margin-bottom: 50px;
     }
 
     ol {
@@ -238,7 +384,7 @@ body {
           border: 0;
           background-color: rgb(8, 224, 37);
           transition: transform 0.8s ease;
-          font-family: "Delius";
+          font-family: "Lexend";
           font-size: 20px;
 
           &:hover {
@@ -252,7 +398,7 @@ body {
           border: 0;
           background-color: rgb(224, 101, 70);
           transition: transform 0.8s ease;
-          font-family: "Delius";
+          font-family: "Lexend";
           font-size: 20px;
 
           &:hover {
@@ -268,7 +414,7 @@ body {
     width: 450px;
     padding: 0;
     font-size: 30px;
-    font-family: "Delius";
+    font-family: "Lexend";
     border-radius: 10px;
     margin-top: 50px;
     transition: transform 0.8s ease;
@@ -311,7 +457,7 @@ body {
         height: 60px;
         width: 60px;
         border-radius: 10px;
-        font-family: "Delius";
+        font-family: "Lexend";
         font-size: 34px;
       }
 
@@ -356,7 +502,7 @@ body {
       width: 400px;
       padding: 0;
       font-size: 30px;
-      font-family: "Delius";
+      font-family: "Lexend";
       border-radius: 10px;
       margin-top: 50px;
       transition: transform 0.8s ease;

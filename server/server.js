@@ -8,34 +8,46 @@ const fs = require("fs");
 require("dotenv").config();
 
 const app = express();
-app.use(cors({
-  origin: process.env.FRONTEND_ORIGIN || "*",
-  methods: ["GET", "POST"],
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: process.env.FRONTEND_ORIGIN || "*",
+    methods: ["GET", "POST"],
+    credentials: true,
+  })
+);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use(express.static("public"));
 
 const server = http.createServer(app);
-const io = socketIo(server, {
-  cors: {
-    origin: process.env.FRONTEND_ORIGIN || "*",
-    methods: ["GET", "POST"],
-    credentials: true,
-  },
-});
+const io = socketIo(server, { cors: { origin: "*" } });
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, "uploads/"),
   filename: (req, file, cb) =>
-    cb(null, Date.now() + "-" + Math.round(Math.random() * 1e9) + ".webm"),
+    cb(null, Date.now() + "-" + Math.round(Math.random() * 1e9) + ".webm"), // determine le nom du fichier audio
 });
 
 const upload = multer({ storage });
 
-const clips = ["asterion_morose.mp4", "asterion_vache.mp4", "bassem_aller_ftg.mp4", "mario_chute.mp4", "scooby_doo.mp4", "seranno.mp4", "skype.mp4", "zombie.mp4", "gnegnegne.mp4", "guettez_barre.mp4", "amr_khera.mp4", "jean_cacabox.mp4", "gamixtreize_bz.mp4", "clash_r_emotes.mp4", "broly.mp4"]; // nouveau clip modif ici
+const clips = [
+  "asterion_morose.mp4",
+  "asterion_vache.mp4",
+  "bassem_aller_ftg.mp4",
+  "mario_chute.mp4",
+  "scooby_doo.mp4",
+  "seranno.mp4",
+  "skype.mp4",
+  "zombie.mp4",
+  "gnegnegne.mp4",
+  "guettez_barre.mp4",
+  "amr_khera.mp4",
+  "jean_cacabox.mp4",
+  "gamixtreize_bz.mp4",
+  "clash_r_emotes.mp4",
+  "broly.mp4",
+]; // nouveau clip modif ici
 
-let rooms = {};
+let rooms = {}; // roomId: { players, recordings, hostId, validated, clipIndex }
 
 function playNextClip(roomId) {
   const room = rooms[roomId];
@@ -44,13 +56,13 @@ function playNextClip(roomId) {
   if (!room.clipIndex) {
     room.clipIndex = 0;
 
-    // initialise les scores a 0 des le début
+    // Initialise les scores a 0 des le debut
     room.scores = {};
     for (const playerId of room.players.keys()) {
       room.scores[playerId] = 0;
     }
 
-    // envoye les scores initiaux
+    // envoie les scores initiaux
     const scoresByName = {};
     for (const [socketId, score] of Object.entries(room.scores)) {
       const name = room.players.get(socketId);
@@ -66,13 +78,13 @@ function playNextClip(roomId) {
 
   const clipName = clips[room.clipIndex];
 
-  // determine la phase avant lancement officiel
+  // determine la phase dans le lobby avant lancement de la partie
   const phase = room.clipIndex === 0 ? "waiting_start" : "playing_clip";
   io.to(roomId).emit("phase_change", phase);
   io.to(roomId).emit("play_clip", { clipName });
   io.to(roomId).emit("phase_change", "playing_clip");
 
-  // reset les state
+  // eeset state
   room.recordings = {};
   room.validated = new Set();
 
@@ -80,32 +92,51 @@ function playNextClip(roomId) {
 }
 
 io.on("connection", (socket) => {
-  socket.on("join", ({ roomId, name }) => {
-    socket.join(roomId);
-    if (!rooms[roomId]) {
-      rooms[roomId] = {
-        players: new Map(),
-        recordings: {},
-        validated: new Set(),
-        hostId: socket.id,
-        clipIndex: 0,
-        scores: {},
-        clips: ["clip1.mp4", "clip2.mp4"],
-      };
+  socket.on("create_room", ({ name }, callback) => {
+    let code;
+    do {
+      code = Math.floor(100000 + Math.random() * 900000).toString();
+    } while (rooms[code]);
+
+    rooms[code] = {
+      players: new Map(),
+      hostId: socket.id,
+      recordings: {},
+      validated: new Set(),
+      clipIndex: 0,
+      scores: {},
+      clips: clips,
+    };
+
+    socket.join(code);
+    rooms[code].players.set(socket.id, name);
+
+    io.to(code).emit("update_players", {
+      names: Object.fromEntries(rooms[code].players),
+      hostId: socket.id,
+    });
+
+    callback({ success: true, roomId: code });
+  });
+
+  socket.on("join_room", ({ code, name }, callback) => {
+    const room = rooms[code];
+    if (!room) {
+      return callback({ success: false, error: "Room not found" });
     }
 
-    const room = rooms[roomId];
+    socket.join(code);
     room.players.set(socket.id, name);
 
-    if (!room.hostId) room.hostId = socket.id;
-
-    io.to(roomId).emit("update_players", {
+    io.to(code).emit("update_players", {
       names: Object.fromEntries(room.players),
       hostId: room.hostId,
     });
 
-    if (room.players.size === 2) {
-      io.to(roomId).emit("phase_change", "waiting_start");
+    callback({ success: true, roomId: code });
+
+    if (room.players.size >= 2) {
+      io.to(code).emit("phase_change", "waiting_start");
     }
   });
 
@@ -171,7 +202,7 @@ io.on("connection", (socket) => {
     const room = rooms[roomId];
     if (!room) return;
     if (!room.votes[targetId]) room.votes[targetId] = [];
-    // refus si ce joueur a deja vote pour cette personne
+    // refuse le vote si le voteur a deja vote pour ce joueur
     if (room.votes[targetId].some((v) => v.voter === socket.id)) return;
     room.votes[targetId].push({ voter: socket.id, note });
     const expectedVotes = room.players.size - 1;
@@ -210,7 +241,7 @@ io.on("connection", (socket) => {
     const room = rooms[roomId];
     if (!room || socket.id !== room.hostId) return;
 
-    // supprime les anciens fichiers d'enregistrement
+    // supprime les anciens fichiers d'enregistrements
     for (const blobName of Object.values(room.recordings)) {
       const filePath = path.join(__dirname, "uploads", blobName);
       fs.unlink(filePath, (err) => {
@@ -219,7 +250,7 @@ io.on("connection", (socket) => {
       });
     }
 
-    // reinitialise l'état de la room
+    // reinitialise l'etat de la room
     room.recordings = {};
     room.validated = new Set();
     room.voteQueue = [];
@@ -238,9 +269,9 @@ io.on("connection", (socket) => {
         }
       });
 
-      // envoie le game over
+      // Envoie game over
       io.to(roomId).emit("game_over");
-      return; // necessaire pour ne pas renvoyer playNextClip
+      return; // pour ne pas appeler playNextClip après
     }
 
     // lance le prochain clip
