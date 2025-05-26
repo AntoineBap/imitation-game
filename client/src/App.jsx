@@ -23,7 +23,7 @@ export default function App() {
   const [playerCount, setPlayerCount] = useState(0);
   const [currentVoterId, setCurrentVoterId] = useState(null);
   const [currentAudio, setCurrentAudio] = useState(null);
-  const [currentClip, setCurrentClip] = useState("asterion_morose.mp4");
+  const [currentClip, setCurrentClip] = useState("sailor_moon.mp4");
   const [scores, setScores] = useState({});
   const [hasVoted, setHasVoted] = useState(false);
   const [videoEnded, setVideoEnded] = useState(false);

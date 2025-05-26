@@ -30,25 +30,10 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 const clips = [
-  "asterion_morose.mp4",
-  "asterion_vache.mp4",
-  "bassem_aller_ftg.mp4",
-  "mario_chute.mp4",
   "sailor_moon.mp4",
-  "scooby_doo.mp4",
-  "seranno.mp4",
   "controle_de_police.mp4",
   "omerta_47.mp4",
-  "skype.mp4",
-  "zombie.mp4",
-  "gnegnegne.mp4",
-  "guettez_barre.mp4",
   "velos_en_lair.mp4",
-  "amr_khera.mp4",
-  "jean_cacabox.mp4",
-  "gamixtreize_bz.mp4",
-  "clash_r_emotes.mp4",
-  "broly.mp4",
   "sam_teurpoin.mp4",
   "alexo_bicicleta.mp4"
 ]; // nouveau clip modif ici
