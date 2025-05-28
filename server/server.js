@@ -27,26 +27,8 @@ const storage = multer.diskStorage({
     cb(null, Date.now() + "-" + Math.round(Math.random() * 1e9) + ".webm"), // determine le nom du fichier audio
 });
 
+
 const upload = multer({ storage });
-
-const clips = [
-  "controle_de_police.mp4",
-  "omerta_47.mp4",
-  "velos_en_lair.mp4",
-  "sam_teurpoin.mp4",
-  "alexo_bicicleta.mp4",
-  "affronte_ce_cul.mp4",
-  "chatte_de_ta_mere.mp4",
-  "ibratv_walouzz.mp4",
-  "je_suis_jamais_ne.mp4",
-  "mazeltov_jewbuzz.mp4",
-  "metamask.mp4",
-  "mon_air_consanguin.mp4",
-  "mounir_moons_homme.mp4",
-  "rebeulove.mp4",
-  "walakdouktoulib.mp4"
-
-]; // nouveau clip modif ici
 
 let rooms = {}; // roomId: { players, recordings, hostId, validated, clipIndex }
 
@@ -54,43 +36,56 @@ function playNextClip(roomId) {
   const room = rooms[roomId];
   if (!room) return;
 
+  const roomDir = path.join(__dirname, "public", roomId);
+
+  // Si c'est le premier clip, on charge la liste des fichiers .mp4
   if (!room.clipIndex) {
     room.clipIndex = 0;
+    try {
+      const files = fs.readdirSync(roomDir).filter(f => f.endsWith(".mp4"));
+      room.clips = files;
 
-    // Initialise les scores a 0 des le debut
+      // Tri facultatif par date (si tu veux reproduire l'ordre d'upload)
+      // files.sort((a, b) => fs.statSync(path.join(roomDir, a)).mtimeMs - fs.statSync(path.join(roomDir, b)).mtimeMs);
+
+    } catch (e) {
+      console.error(`❌ Impossible de lire les clips pour la room ${roomId}`, e);
+      return;
+    }
+
+    // Initialise les scores
     room.scores = {};
     for (const playerId of room.players.keys()) {
       room.scores[playerId] = 0;
     }
 
-    // envoie les scores initiaux
     const scoresByName = {};
     for (const [socketId, score] of Object.entries(room.scores)) {
       const name = room.players.get(socketId);
       if (name) scoresByName[name] = score;
     }
+
     io.to(roomId).emit("update_scores", scoresByName);
   }
 
-  if (room.clipIndex >= clips.length) {
+  if (room.clipIndex >= room.clips.length) {
     io.to(roomId).emit("game_over");
     return;
   }
 
-  const clipName = clips[room.clipIndex];
+  const clipName = room.clips[room.clipIndex];
 
-  // determine la phase dans le lobby avant lancement de la partie
   const phase = room.clipIndex === 0 ? "waiting_start" : "playing_clip";
   io.to(roomId).emit("phase_change", phase);
   io.to(roomId).emit("play_clip", { clipName });
   io.to(roomId).emit("phase_change", "playing_clip");
 
-  // eeset state
   room.recordings = {};
   room.validated = new Set();
 
   room.clipIndex++;
 }
+
 
 io.on("connection", (socket) => {
   socket.on("create_room", ({ name }, callback) => {
@@ -106,7 +101,7 @@ io.on("connection", (socket) => {
       validated: new Set(),
       clipIndex: 0,
       scores: {},
-      clips: clips,
+      clips: [],
     };
 
     socket.join(code);
@@ -259,7 +254,8 @@ io.on("connection", (socket) => {
     room.votes = {};
 
     if (room.clipIndex >= room.clips.length) {
-      // vide le dossier uploads en fin de game
+      // vide le dossier uploads et les clips de la room en fin de game
+      const roomDir = path.join(__dirname, "public", roomId);
       const uploadsDir = path.join(__dirname, "uploads");
       fs.readdir(uploadsDir, (err, files) => {
         if (err) return console.error("Erreur lecture uploads:", err);
@@ -268,6 +264,11 @@ io.on("connection", (socket) => {
             if (err) console.error("Erreur suppression fichier:", file, err);
           });
         }
+      });
+
+      fs.rm(roomDir, { recursive: true, force: true }, (err) => {
+        if (err) console.error("❌ Erreur suppression dossier room:", roomDir, err);
+        else console.log("🗑️ Dossier room supprimé:", roomDir);
       });
 
       // Envoie game over
@@ -297,6 +298,63 @@ io.on("connection", (socket) => {
         }
       }
     }
+  });
+});
+
+const videoStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const roomId = req.query.roomId;
+    console.log("➡️ Destination appelée, roomId =", roomId);
+    if (!roomId) return cb(new Error("Room ID manquant"), null);
+    const dir = path.join(__dirname, "public", roomId);
+    fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const uniqueName = Date.now() + "-" + Math.round(Math.random() * 1e9) + ext;
+    cb(null, uniqueName);
+  },
+});
+
+const videoUpload = multer({
+  storage: videoStorage,
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50 Mo max
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype !== "video/mp4") {
+      return cb(new Error("Seuls les fichiers .mp4 sont autorisés"));
+    }
+    cb(null, true);
+  },
+});
+
+app.post("/upload_clip", (req, res) => {
+  videoUpload.array("clips", 10)(req, res, function (err) {
+    const roomId = req.query?.roomId;
+    console.log("📥 Upload multiple déclenché pour room:", roomId);
+
+    if (err instanceof multer.MulterError) {
+      if (err.code === "LIMIT_FILE_SIZE") {
+        return res.status(413).json({ error: "Fichier trop volumineux (max 50 Mo)" });
+      }
+      return res.status(400).json({ error: err.message });
+    } else if (err) {
+      return res.status(400).json({ error: err.message });
+    }
+
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ error: "Aucun fichier reçu" });
+    }
+
+    const uploadedFiles = req.files.map(file => ({
+      filename: file.filename,
+      publicPath: `${roomId}/${file.filename}`,
+    }));
+
+    return res.status(200).json({
+      success: true,
+      files: uploadedFiles,
+    });
   });
 });
 

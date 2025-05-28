@@ -28,7 +28,7 @@ body {
     font-size: 50px;
   }
 
-  .lobby_selection {
+  .lobby_selection{
     display: flex;
     text-align: center;
     align-items: center;
@@ -37,12 +37,12 @@ body {
     height: 500px;
     width: 500px;
 
-    h2 {
+    h2{
       margin: 0;
       font-size: 44px;
     }
 
-    button {
+    button{
       height: 100px;
       width: 350px;
       padding: 0;
@@ -61,7 +61,7 @@ body {
     }
   }
 
-  .create_room {
+  .create_room{
     display: flex;
     justify-content: space-evenly;
     flex-direction: column;
@@ -69,32 +69,33 @@ body {
     height: 500px;
     width: 600px;
 
-    .top_content {
+    .top_content{
       display: flex;
       align-items: center;
       justify-content: flex-start;
       width: 100%;
       margin-bottom: 80px;
-
-      .back_arrow_btn {
+      
+      .back_arrow_btn{
         height: 50px;
         width: 50px;
         background-color: transparent;
         border: 0;
 
-        img {
+        img{
           height: 50px;
         }
       }
 
-      h2 {
+      h2{
         width: 100%;
         margin: 0;
         font-size: 44px;
       }
     }
 
-    .name_input_container {
+
+    .name_input_container{
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -132,7 +133,7 @@ body {
     }
   }
 
-  .join_room {
+  .join_room{
     display: flex;
     justify-content: space-evenly;
     flex-direction: column;
@@ -140,32 +141,32 @@ body {
     height: auto;
     width: 600px;
 
-    .top_content {
+    .top_content{
       display: flex;
       align-items: center;
       justify-content: flex-start;
       width: 100%;
       margin-bottom: 80px;
-
-      .back_arrow_btn {
+      
+      .back_arrow_btn{
         height: 50px;
         width: 50px;
         background-color: transparent;
         border: 0;
 
-        img {
+        img{
           height: 50px;
         }
       }
 
-      h2 {
+      h2{
         width: 100%;
         margin: 0;
         font-size: 44px;
       }
     }
 
-    .name_input_container {
+    .name_input_container{
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -203,13 +204,25 @@ body {
     }
   }
 
-  .waiting {
+  .waiting{
     font-size: 30px;
     font-weight: 600;
-    margin-top: 100px;
+
+  } 
+
+  .connected{
+    font-size: 30px;
+    font-weight: 600;
+
+    .waiting {
+      p{
+        font-size: 40px;
+        margin-bottom: 50px;
+      }
+    }
   }
 
-  .waiting_start {
+  .waiting_start_btn {
     height: 100px;
     width: 350px;
     padding: 0;
@@ -225,26 +238,114 @@ body {
       transform: scale(1.2);
     }
   }
+  
+  .lobby_container{
+    display: flex;
+    align-items: center;
+    justify-content: space-evenly;
+    width: 100%;
 
-  .players_connected {
-    h2 {
-      font-size: 54px;
-    }
+    form{
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
 
-    p {
-      font-size: 40px;
-      margin-bottom: 50px;
-    }
+      height: 400px;
+      width: 500px;
 
-    ol {
-      list-style-type: none;
+      .file_upload {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 200px;
+        width: 100%;
 
-      li {
+        input[type="file"] {
+          display: none; // Cache l’input original
+        }
+
+        label {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          height: 90%;
+          width: 100%;
+          border: 2px dashed #ffffff;
+          border-radius: 10px;
+          background-color: #4a5e5f;
+          padding: 40px;
+          cursor: pointer;
+          
+          transition: border-color 0.3s, background-color 0.3s;
+
+          &:hover {
+            border-color: #666;
+            background-color: #f9f9f9;
+          }
+
+          img {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 10px;
+          }
+
+          span {
+            font-size: 14px;
+            color: #000000;
+          }
+        }
+      }
+
+      button{
+        height: 100px;
+        width: 350px;
+        padding: 0;
+        border: 0;
         font-size: 30px;
-        margin-top: 10px;
+        font-family: "Lexend";
+        border-radius: 10px;
+        margin-top: 50px;
+        transition: transform 0.8s ease;
+
+        &:hover {
+          background-color: #4a5e5f;
+          color: #f8f5ee;
+          transform: scale(1.2);
+        }
+      }
+    }
+
+    .connected_container{
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-evenly;
+      height: auto;
+      .connected {
+        h2 {
+          font-size: 54px;
+        }
+
+        p{
+          font-size: 40px;
+          margin-bottom: 50px;
+        }
+
+        ol {
+          list-style-type: none;
+
+          li {
+            font-size: 30px;
+            margin-top: 10px;
+          }
+        }
       }
     }
   }
+
   .playing_clip {
     video {
       border: 3px solid white;

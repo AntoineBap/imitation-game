@@ -23,7 +23,7 @@ export default function App() {
   const [playerCount, setPlayerCount] = useState(0);
   const [currentVoterId, setCurrentVoterId] = useState(null);
   const [currentAudio, setCurrentAudio] = useState(null);
-  const [currentClip, setCurrentClip] = useState("controle_de_police.mp4");
+  const [currentClip, setCurrentClip] = useState(null);
   const [scores, setScores] = useState({});
   const [hasVoted, setHasVoted] = useState(false);
   const [videoEnded, setVideoEnded] = useState(false);
@@ -36,11 +36,17 @@ export default function App() {
   const [recordingProgress, setRecordingProgress] = useState(0);
   const [roomId, setRoomId] = useState(null); // room dynamique
   const [joinCode, setJoinCode] = useState(""); // input utilisateur
+  const [uploadedFiles, setUploadedFiles] = useState([]);
 
   const videoRef = useRef(null);
   const audioRef = useRef(null);
   const chunksRef = useRef([]);
   const isHost = socketId === hostId;
+
+  const getClipUrl = (clipName) => {
+    if (!clipName || !roomId) return "";
+    return `${backendURL}/${roomId}/${clipName}`;
+  };
 
   const handleVote = (note) => {
     if (hasVoted) return;
@@ -52,7 +58,7 @@ export default function App() {
     const handleConnect = () => setSocketId(socket.id);
     const handleStartGame = () => setPhase("playing_clip");
     const handlePlayClip = ({ clipName }) => {
-      setCurrentClip(clipName);
+      setCurrentClip(`${clipName}`);
       setPhase("playing_clip");
       setShowVideo(true);
       setAudioBlob(null);
@@ -437,24 +443,133 @@ export default function App() {
         </div>
       )}
 
-      {phase === "waiting_start" && !isHost && (
-        <p className="waiting">
-          🕒 En attente du host pour lancer la partie...
-        </p>
+      {phase === "waiting" && (
+        <div className="connected">
+          <p className="waiting">
+            🕒 En attente d'autres joueurs...
+          </p>
+          <p>
+            🔐 Code du salon : <strong>{roomId}</strong>
+          </p>
+        </div>
       )}
 
-      {phase === "waiting_start" && isHost && (
-        <button
-          className="waiting_start"
-          onClick={() => {
-            socket.emit("request_button_countdown", {
-              roomId,
-              action: "start_game",
-            });
-          }}
-        >
-          Commencer la partie
-        </button>
+  
+      {phase === "waiting_start" && (  
+        <div className="lobby_container">
+          <div className="connected_container">
+            <div className="connected">
+              <h2>👥 Joueurs connectés : </h2>
+              <ol>
+                {Object.entries(players).map(([id, name]) => (
+                  <li key={id}>
+                    {name}
+                    {id === hostId && " (Hôte)"}
+                  </li>
+                ))}
+              </ol>
+              <p>
+                🔐 Code du salon : <strong>{roomId}</strong>
+              </p>
+            </div>
+            {isHost ? (
+              <button
+                className="waiting_start_btn"
+                onClick={() => {
+                  socket.emit("request_button_countdown", {
+                    roomId,
+                    action: "start_game",
+                  });
+                }}
+              >
+                Commencer la partie
+              </button>
+            ) : (
+              <p className="waiting">
+            🕒 En attente du host pour lancer la partie...
+              </p>
+            )}
+            
+          </div>
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              console.log("Fichiers à uploader :", uploadedFiles);
+              if (!uploadedFiles || uploadedFiles.length === 0) {
+                return alert("Aucun fichier sélectionné");
+              }
+
+              for (let i = 0; i < uploadedFiles.length; i++) {
+                if (uploadedFiles[i].type !== "video/mp4") {
+                  return alert("Tous les fichiers doivent être des .mp4");
+                }
+              }
+
+              const formData = new FormData();
+              for (let i = 0; i < uploadedFiles.length; i++) {
+                formData.append("clips", uploadedFiles[i]);
+              }
+              try {
+                const res = await fetch(`${backendURL}/upload_clip?roomId=${roomId}`, {
+                  method: "POST",
+                  body: formData,
+                });
+
+                const data = await res.json();
+                if (data.success) {
+                  alert("Upload confirmé !");
+                  setUploadedFiles([]);
+                } else {
+                  alert("Échec de l'upload");
+                }
+              } catch (error) {
+                console.error("Erreur lors de l'upload :", error);
+                alert("Erreur réseau");
+              }
+            }}
+          > 
+            <div
+              className="file_upload"
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                const files = Array.from(e.dataTransfer.files);
+                setUploadedFiles(files);
+              }}
+            >
+              <input
+                type="file"
+                id="fileInput"
+                name="clips"
+                accept="video/mp4"
+                multiple
+                onChange={(e) => {
+                  const files = Array.from(e.target.files);
+                  setUploadedFiles(files);
+                }}
+              />
+              {uploadedFiles.length === 0 ? (
+                <label htmlFor="fileInput">
+                  <img src="./bin.svg" alt="Upload Cloud Icon" />
+                  <span>Glissez et déposez vos clips ou cliquez ici</span>
+                  <span>Format : mp4 uniquement</span>
+                  <span>Taille : 40MB maximum</span>
+                </label>
+              ) : (
+                <div className="uploaded_list">
+                  <p>🎥 Fichiers sélectionnés :</p>
+                  <ul>
+                    {uploadedFiles.map((file, index) => (
+                      <li key={index}>{file.name}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+            <button type="submit">Upload </button>
+          </form>
+        </div>
+              
       )}
 
       {phase === "playing_clip" && currentClip && (
@@ -462,7 +577,7 @@ export default function App() {
           <video
             key={currentClip}
             ref={videoRef}
-            src={`/${currentClip}`}
+            src={getClipUrl(currentClip)}
             controls
             autoPlay
             onEnded={() => {
@@ -481,13 +596,13 @@ export default function App() {
       {phase === "recording" && showVideo && (
         <div className="recording">
           {!isLocallyRecording && (
-            <video ref={videoRef} src={`/${currentClip}`} controls />
+            <video ref={videoRef} src={getClipUrl(currentClip)} controls />
           )}
 
           {isLocallyRecording && (
             <video
               ref={videoRef}
-              src={`/${currentClip}`}
+              src={getClipUrl(currentClip)}
               autoPlay
               controls
               muted
@@ -584,7 +699,7 @@ export default function App() {
           </p>
           <video
             ref={videoRef}
-            src={`/${currentClip}`}
+            src={getClipUrl(currentClip)}
             autoPlay
             muted
             controls
@@ -649,22 +764,7 @@ export default function App() {
         </div>
       )}
 
-      {(phase === "waiting" || phase === "waiting_start") && (
-        <div className="players_connected">
-          <h2>👥 Joueurs connectés : </h2>
-          <p>
-            🔐 Code du salon : <strong>{roomId}</strong>
-          </p>
-          <ol>
-            {Object.entries(players).map(([id, name]) => (
-              <li key={id}>
-                {name}
-                {id === hostId && " (Hôte)"}
-              </li>
-            ))}
-          </ol>
-        </div>
-      )}
+      
 
       {![
         "lobby_selection",
@@ -675,7 +775,7 @@ export default function App() {
         "final_scoreboard",
       ].includes(phase) && (
         <div className="scoreboard">
-          <h2>🏆 Scores </h2>
+          <h2>Scores :</h2>
           {Object.entries(scores).map(([name, score]) => (
             <div className="player">
               <div>{name}</div>
@@ -687,7 +787,7 @@ export default function App() {
 
       {phase === "final_scoreboard" && (
         <div className="final_scoreboard">
-          <h2>🏆 Résultats finaux 🏆</h2>
+          <h2>🏆 Résultats finaux</h2>
           {Object.entries(scores)
             .sort((a, b) => b[1] - a[1])
             .map(([name, score], index) => (
