@@ -161,6 +161,7 @@ export default function App() {
       setPhase("final_scoreboard");
     };
     const handleVotingDone = (votes) => {
+      console.log("Votes terminés:", votes);
       setPhase("voting_done");
     };
     const handleUpdateScores = (newScores) => setScores(newScores);
@@ -554,6 +555,7 @@ export default function App() {
           <form
             onSubmit={async (e) => {
               e.preventDefault();
+              console.log("Fichiers à uploader :", uploadedFiles);
               if (!uploadedFiles || uploadedFiles.length === 0) {
                 return alert("Aucun fichier sélectionné");
               }

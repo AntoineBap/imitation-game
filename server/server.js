@@ -18,16 +18,20 @@ app.use(
 );
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use(express.static("public"));
-app.use(express.json());
 
 const server = http.createServer(app);
 const io = socketIo(server, { cors: { origin: "*" } });
 
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, "uploads/"),
+  destination: (req, file, cb) => {
+    const dir = path.join(__dirname, "uploads");
+    fs.mkdirSync(dir, { recursive: true }); 
+    cb(null, dir);
+  },
   filename: (req, file, cb) =>
-    cb(null, Date.now() + "-" + Math.round(Math.random() * 1e9) + ".webm"), // determine le nom du fichier audio
+    cb(null, Date.now() + "-" + Math.round(Math.random() * 1e9) + ".webm"),
 });
+
 
 const upload = multer({ storage });
 
