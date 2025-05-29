@@ -5,6 +5,7 @@ const multer = require("multer");
 const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
+const ffmpeg = require("fluent-ffmpeg")
 require("dotenv").config();
 
 const app = express();
@@ -22,15 +23,10 @@ const server = http.createServer(app);
 const io = socketIo(server, { cors: { origin: "*" } });
 
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = path.join(__dirname, "uploads");
-    fs.mkdirSync(dir, { recursive: true }); 
-    cb(null, dir);
-  },
+  destination: (req, file, cb) => cb(null, "uploads/"),
   filename: (req, file, cb) =>
-    cb(null, Date.now() + "-" + Math.round(Math.random() * 1e9) + ".webm"),
+    cb(null, Date.now() + "-" + Math.round(Math.random() * 1e9) + ".webm"), // determine le nom du fichier audio
 });
-
 
 const upload = multer({ storage });
 
@@ -46,14 +42,16 @@ function playNextClip(roomId) {
   if (!room.clipIndex) {
     room.clipIndex = 0;
     try {
-      const files = fs.readdirSync(roomDir).filter(f => f.endsWith(".mp4"));
+      const files = fs.readdirSync(roomDir).filter((f) => f.endsWith(".mp4"));
       room.clips = files;
 
       // Tri facultatif par date (si tu veux reproduire l'ordre d'upload)
       // files.sort((a, b) => fs.statSync(path.join(roomDir, a)).mtimeMs - fs.statSync(path.join(roomDir, b)).mtimeMs);
-
     } catch (e) {
-      console.error(`❌ Impossible de lire les clips pour la room ${roomId}`, e);
+      console.error(
+        `❌ Impossible de lire les clips pour la room ${roomId}`,
+        e
+      );
       return;
     }
 
@@ -89,7 +87,6 @@ function playNextClip(roomId) {
 
   room.clipIndex++;
 }
-
 
 io.on("connection", (socket) => {
   socket.on("create_room", ({ name }, callback) => {
@@ -271,7 +268,8 @@ io.on("connection", (socket) => {
       });
 
       fs.rm(roomDir, { recursive: true, force: true }, (err) => {
-        if (err) console.error("❌ Erreur suppression dossier room:", roomDir, err);
+        if (err)
+          console.error("❌ Erreur suppression dossier room:", roomDir, err);
         else console.log("🗑️ Dossier room supprimé:", roomDir);
       });
 
@@ -339,7 +337,9 @@ app.post("/upload_clip", (req, res) => {
 
     if (err instanceof multer.MulterError) {
       if (err.code === "LIMIT_FILE_SIZE") {
-        return res.status(413).json({ error: "Fichier trop volumineux (max 50 Mo)" });
+        return res
+          .status(413)
+          .json({ error: "Fichier trop volumineux (max 50 Mo)" });
       }
       return res.status(400).json({ error: err.message });
     } else if (err) {
@@ -350,7 +350,7 @@ app.post("/upload_clip", (req, res) => {
       return res.status(400).json({ error: "Aucun fichier reçu" });
     }
 
-    const uploadedFiles = req.files.map(file => ({
+    const uploadedFiles = req.files.map((file) => ({
       filename: file.filename,
       publicPath: `${roomId}/${file.filename}`,
     }));
@@ -359,6 +359,108 @@ app.post("/upload_clip", (req, res) => {
       success: true,
       files: uploadedFiles,
     });
+  });
+});
+
+// Endpoint pour fusionner vidéo et audio
+app.post("/merge-video-audio", async (req, res) => {
+  try {
+    const { videoPath, audioPath, roomId, playerName } = req.body;
+
+    // Chemins des fichiers
+    const videoFullPath = path.join(__dirname, "public", roomId, videoPath);
+    const audioFullPath = path.join(__dirname, "uploads", audioPath);
+
+    // Vérifier que les fichiers existent
+    if (!fs.existsSync(videoFullPath)) {
+      return res
+        .status(404)
+        .json({ success: false, error: "Fichier vidéo non trouvé" });
+    }
+
+    if (!fs.existsSync(audioFullPath)) {
+      return res
+        .status(404)
+        .json({ success: false, error: "Fichier audio non trouvé" });
+    }
+
+    // Nom du fichier de sortie
+    const outputFilename = `merged_${playerName}_${Date.now()}.mp4`;
+    const outputPath = path.join(
+      __dirname,
+      "uploads",
+      "merged",
+      outputFilename
+    );
+
+    // Créer le dossier merged s'il n'existe pas
+    const mergedDir = path.join(__dirname, "uploads", "merged");
+    if (!fs.existsSync(mergedDir)) {
+      fs.mkdirSync(mergedDir, { recursive: true });
+    }
+
+    // Utiliser FFmpeg pour fusionner
+    ffmpeg()
+      .input(videoFullPath)
+      .input(audioFullPath)
+      .outputOptions([
+        "-c:v copy", // Copier le codec vidéo sans réencoder
+        "-c:a aac", // Encoder l'audio en AAC
+        "-map 0:v:0", // Prendre la vidéo du premier input
+        "-map 1:a:0", // Prendre l'audio du deuxième input
+        "-shortest", // Arrêter quand le plus court des deux se termine
+      ])
+      .output(outputPath)
+      .on("end", () => {
+        console.log("✅ Fusion terminée:", outputFilename);
+        res.json({
+          success: true,
+          filename: outputFilename,
+          message: "Fichiers fusionnés avec succès",
+        });
+      })
+      .on("error", (err) => {
+        console.error("❌ Erreur FFmpeg:", err);
+        res.status(500).json({
+          success: false,
+          error: "Erreur lors de la fusion: " + err.message,
+        });
+      })
+      .run();
+  } catch (error) {
+    console.error("❌ Erreur serveur:", error);
+    res.status(500).json({
+      success: false,
+      error: "Erreur serveur: " + error.message,
+    });
+  }
+});
+
+// Endpoint pour télécharger les fichiers fusionnés
+app.get("/download-merged/:filename", (req, res) => {
+  const filename = req.params.filename;
+  const filePath = path.join(__dirname, "uploads", "merged", filename);
+
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: "Fichier non trouvé" });
+  }
+
+  res.download(filePath, (err) => {
+    if (err) {
+      console.error("❌ Erreur téléchargement:", err);
+      return res.status(500).json({ error: "Erreur lors du téléchargement" });
+    }
+
+    // Optionnel: supprimer le fichier après téléchargement
+    setTimeout(() => {
+      fs.unlink(filePath, (unlinkErr) => {
+        if (unlinkErr) {
+          console.error("❌ Erreur suppression fichier fusionné:", unlinkErr);
+        } else {
+          console.log("🗑️ Fichier fusionné supprimé:", filename);
+        }
+      });
+    }, 5000); // Attendre 5 secondes avant de supprimer
   });
 });
 

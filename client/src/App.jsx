@@ -37,6 +37,8 @@ export default function App() {
   const [roomId, setRoomId] = useState(null); // room dynamique
   const [joinCode, setJoinCode] = useState(""); // input utilisateur
   const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState("");
 
   const videoRef = useRef(null);
   const audioRef = useRef(null);
@@ -52,6 +54,69 @@ export default function App() {
     if (hasVoted) return;
     socket.emit("vote", { roomId, targetId: currentVoterId, note });
     setHasVoted(true);
+  };
+
+  const downloadVideoWithAudio = async () => {
+    if (!currentClip || !currentAudio) {
+      alert("Vidéo ou audio manquant");
+      return;
+    }
+
+    setIsDownloading(true);
+    setDownloadProgress("Préparation du téléchargement...");
+
+    try {
+      setDownloadProgress("Fusion de la vidéo et de l'audio...");
+
+      // Appeler l'endpoint backend pour fusionner vidéo + audio
+      const response = await fetch(`${backendURL}/merge-video-audio`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          videoPath: currentClip,
+          audioPath: currentAudio,
+          roomId: roomId,
+          playerName: players[currentVoterId] || "player",
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Erreur lors de la fusion des fichiers");
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        setDownloadProgress("Téléchargement du fichier fusionné...");
+
+        // Télécharger le fichier MP4 fusionné
+        const downloadUrl = `${backendURL}/download-merged/${data.filename}`;
+        const a = document.createElement("a");
+        a.href = downloadUrl;
+        a.download = `imitation_${
+          players[currentVoterId] || "player"
+        }_${Date.now()}.mp4`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        setDownloadProgress("Téléchargement terminé !");
+
+        setTimeout(() => {
+          setIsDownloading(false);
+          setDownloadProgress("");
+        }, 2000);
+      } else {
+        throw new Error(data.error || "Erreur inconnue");
+      }
+    } catch (error) {
+      console.error("Erreur lors du téléchargement:", error);
+      alert("Erreur lors du téléchargement: " + error.message);
+      setIsDownloading(false);
+      setDownloadProgress("");
+    }
   };
 
   useEffect(() => {
@@ -96,7 +161,6 @@ export default function App() {
       setPhase("final_scoreboard");
     };
     const handleVotingDone = (votes) => {
-      console.log("Votes terminés:", votes);
       setPhase("voting_done");
     };
     const handleUpdateScores = (newScores) => setScores(newScores);
@@ -445,17 +509,14 @@ export default function App() {
 
       {phase === "waiting" && (
         <div className="connected">
-          <p className="waiting">
-            🕒 En attente d'autres joueurs...
-          </p>
+          <p className="waiting">🕒 En attente d'autres joueurs...</p>
           <p>
             🔐 Code du salon : <strong>{roomId}</strong>
           </p>
         </div>
       )}
 
-  
-      {phase === "waiting_start" && (  
+      {phase === "waiting_start" && (
         <div className="lobby_container">
           <div className="connected_container">
             <div className="connected">
@@ -486,15 +547,13 @@ export default function App() {
               </button>
             ) : (
               <p className="waiting">
-            🕒 En attente du host pour lancer la partie...
+                🕒 En attente du host pour lancer la partie...
               </p>
             )}
-            
           </div>
           <form
             onSubmit={async (e) => {
               e.preventDefault();
-              console.log("Fichiers à uploader :", uploadedFiles);
               if (!uploadedFiles || uploadedFiles.length === 0) {
                 return alert("Aucun fichier sélectionné");
               }
@@ -510,10 +569,13 @@ export default function App() {
                 formData.append("clips", uploadedFiles[i]);
               }
               try {
-                const res = await fetch(`${backendURL}/upload_clip?roomId=${roomId}`, {
-                  method: "POST",
-                  body: formData,
-                });
+                const res = await fetch(
+                  `${backendURL}/upload_clip?roomId=${roomId}`,
+                  {
+                    method: "POST",
+                    body: formData,
+                  }
+                );
 
                 const data = await res.json();
                 if (data.success) {
@@ -527,7 +589,7 @@ export default function App() {
                 alert("Erreur réseau");
               }
             }}
-          > 
+          >
             <div
               className="file_upload"
               onDragOver={(e) => e.preventDefault()}
@@ -569,7 +631,6 @@ export default function App() {
             <button type="submit">Upload </button>
           </form>
         </div>
-              
       )}
 
       {phase === "playing_clip" && currentClip && (
@@ -692,41 +753,58 @@ export default function App() {
       )}
 
       {phase === "voting" && (
-        <div className="voting">
-          <p>
-            🎧 Écoute de l’imitation de{" "}
-            <strong>{players[currentVoterId] || "Inconnu"}</strong>
-          </p>
-          <video
-            ref={videoRef}
-            src={getClipUrl(currentClip)}
-            autoPlay
-            muted
-            controls
-          />
-          <audio
-            src={`${backendURL}/uploads/${currentAudio}`}
-            controls
-            autoPlay
-          />
-          {socketId !== currentVoterId ? (
-            <div className="rating_container">
-              <p>Attribuez une note :</p>
-              {[-1, 1, 2].map((note) => (
-                <button
-                  data-id={note}
-                  key={note}
-                  onClick={() => handleVote(note)}
-                  disabled={hasVoted}
-                >
-                  {note}
-                </button>
-              ))}
-            </div>
-          ) : (
-            <p>🛑 Tu ne peux pas voter pour toi-même</p>
-          )}
-        </div>
+        <>
+          <div className="voting">
+            <p>
+              🎧 Écoute de l’imitation de{" "}
+              <strong>{players[currentVoterId] || "Inconnu"}</strong>
+            </p>
+            <video
+              ref={videoRef}
+              src={getClipUrl(currentClip)}
+              autoPlay
+              muted
+              controls
+            />
+            <audio
+              src={`${backendURL}/uploads/${currentAudio}`}
+              controls
+              autoPlay
+            />
+            {socketId !== currentVoterId ? (
+              <div className="rating_container">
+                <p>Attribuez une note :</p>
+                {[-1, 1, 2].map((note) => (
+                  <button
+                    data-id={note}
+                    key={note}
+                    onClick={() => handleVote(note)}
+                    disabled={hasVoted}
+                  >
+                    {note}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p>🛑 Tu ne peux pas voter pour toi-même</p>
+            )}
+          </div>
+          <button
+            className="download_button"
+            onClick={downloadVideoWithAudio}
+            disabled={isDownloading}
+            title="Télécharger la vidéo avec l'imitation"
+          >
+            {isDownloading ? (
+              <div className="download_loading">
+                <div className="spinner"></div>
+                <span>{downloadProgress}</span>
+              </div>
+            ) : (
+              <>📥 Télécharger l'imitation</>
+            )}
+          </button>
+        </>
       )}
 
       {phase === "voting_done" && (
@@ -763,8 +841,6 @@ export default function App() {
           {buttonCountdown > 1 ? "s" : ""}
         </div>
       )}
-
-      
 
       {![
         "lobby_selection",
